@@ -1,0 +1,268 @@
+// ----------------------------------------------------------
+// packages/db/prisma/schema.prisma
+// ----------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//////////////////////////////////////////////////////////////
+// CONTACTS + CAMPAIGNS
+//////////////////////////////////////////////////////////////
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One contact can have many messages
+  messages Message[]
+
+  // Many-to-many with campaigns
+  CampaignContact CampaignContact[]
+}
+
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  Campaign Campaign[]
+}
+
+model Campaign {
+  id           String   @id @default(cuid())
+  name         String
+  scheduleTime DateTime
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Link to template
+  messageTemplateId String?
+  messageTemplate   MessageTemplate? @relation(fields: [messageTemplateId], references: [id])
+
+  // Relation to contacts (via join table)
+  contacts CampaignContact[]
+}
+
+model CampaignContact {
+  id         String   @id @default(cuid())
+  campaignId String
+  contactId  String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+//////////////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////////////
+
+enum Channel {
+  RCS
+  SMS
+  WHATSAPP
+  TELEGRAM
+  MESSENGER
+}
+
+enum MessageDirection {
+  SENT
+  RECEIVED
+}
+
+enum RichMessageType {
+  TEXT
+  RICH_CARD
+  CONTENT_INFO
+  FILE_CONTENT
+}
+
+enum RichCardType {
+  STANDALONE
+  CAROUSEL
+}
+
+enum MediaHeight {
+  SMALL
+  MEDIUM
+  TALL
+}
+
+enum SuggestionType {
+  OPEN_URL
+  VIEW_LOCATION
+  SHARE_LOCATION
+  CREATE_CALENDAR_EVENT
+  DIAL
+}
+
+//////////////////////////////////////////////////////////////
+// CORE ENTITIES
+//////////////////////////////////////////////////////////////
+
+model Message {
+  id          String           @id @default(cuid())
+  timeStamp   DateTime         @default(now())
+  direction   MessageDirection
+  channel     Channel
+  address     String?
+  contactName String?
+
+  // Relation to RichMessage (optional)
+  richMessage RichMessage?
+
+  // Relation to Contact (one message belongs to one contact)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+
+  @@index([timeStamp])
+  @@index([direction, channel])
+}
+
+//////////////////////////////////////////////////////////////
+// RICH MESSAGE VARIANTS
+//////////////////////////////////////////////////////////////
+
+model RichMessage {
+  id   String          @id @default(cuid())
+  type RichMessageType
+
+  // Parent
+  messageId String  @unique
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // Variants
+  textContent TextContent?
+  richCard    RichCard?
+  contentInfo ContentInfo?
+  fileContent FileContent?
+
+  // Top-level suggestions
+  topSuggestions Suggestion[]
+}
+
+model TextContent {
+  id   String @id @default(cuid())
+  text String
+
+  richMessageId String      @unique
+  richMessage   RichMessage @relation(fields: [richMessageId], references: [id], onDelete: Cascade)
+}
+
+model ContentInfo {
+  id           String  @id @default(cuid())
+  fileUrl      String
+  thumbnailUrl String?
+
+  richMessageId String?      @unique
+  richMessage   RichMessage? @relation(fields: [richMessageId], references: [id], onDelete: Cascade)
+
+  media Media?
+}
+
+model FileContent {
+  id            String  @id @default(cuid())
+  fileName      String
+  fileUrl       String?
+  thumbnailName String?
+
+  richMessageId String      @unique
+  richMessage   RichMessage @relation(fields: [richMessageId], references: [id], onDelete: Cascade)
+}
+
+//////////////////////////////////////////////////////////////
+// RICH CARD STRUCTURE
+//////////////////////////////////////////////////////////////
+
+model RichCard {
+  id   String       @id @default(cuid())
+  type RichCardType
+
+  richMessageId String      @unique
+  richMessage   RichMessage @relation(fields: [richMessageId], references: [id], onDelete: Cascade)
+
+  standalone StandaloneCard?
+  carousel   Carousel?
+}
+
+model StandaloneCard {
+  id        String      @id @default(cuid())
+  contentId String      @unique
+  content   CardContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  richCardId String   @unique
+  richCard   RichCard @relation(fields: [richCardId], references: [id], onDelete: Cascade)
+}
+
+model Carousel {
+  id         String   @id @default(cuid())
+  richCardId String   @unique
+  richCard   RichCard @relation(fields: [richCardId], references: [id], onDelete: Cascade)
+
+  cardContents CardContent[]
+}
+
+model CardContent {
+  id          String  @id @default(cuid())
+  title       String?
+  description String?
+
+  mediaId String? @unique
+  media   Media?  @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+
+  suggestions Suggestion[]
+
+  standalone StandaloneCard?
+  carouselId String?
+  carousel   Carousel?       @relation(fields: [carouselId], references: [id], onDelete: Cascade)
+}
+
+model Media {
+  id     String      @id @default(cuid())
+  height MediaHeight @default(MEDIUM)
+
+  contentInfoId String?      @unique
+  contentInfo   ContentInfo? @relation(fields: [contentInfoId], references: [id], onDelete: SetNull)
+  CardContent   CardContent?
+}
+
+//////////////////////////////////////////////////////////////
+// SUGGESTIONS
+//////////////////////////////////////////////////////////////
+
+model Suggestion {
+  id   String         @id @default(cuid())
+  type SuggestionType
+  text String
+
+  // Payloads
+  url              String?
+  label            String?
+  latitude         Float?
+  longitude        Float?
+  eventTitle       String?
+  eventDescription String?
+  startTime        DateTime?
+  endTime          DateTime?
+  phoneNumber      String?
+
+  richMessageId String?
+  richMessage   RichMessage? @relation(fields: [richMessageId], references: [id], onDelete: Cascade)
+
+  cardContentId String?
+  cardContent   CardContent? @relation(fields: [cardContentId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([richMessageId])
+  @@index([cardContentId])
+}

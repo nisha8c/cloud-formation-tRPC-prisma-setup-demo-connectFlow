@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Redis ElastiCache for ConnectFlow (multi-environment ready)"
+
+Parameters:
+  CacheNodeType:
+    Type: String
+    Default: cache.t3.micro
+    Description: "Node type for the Redis cache"
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "The VPC ID where Redis will be deployed"
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: "The list of Subnet IDs for Redis (at least two recommended)"
+
+  AllowedCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: "CIDR range allowed to access Redis (restrict in production!)"
+
+Resources:
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: "Subnet group for Redis ElastiCache"
+      SubnetIds: !Ref SubnetIds
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for Redis"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: !Ref AllowedCidr
+
+  RedisCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      Engine: redis
+      CacheNodeType: !Ref CacheNodeType
+      NumCacheNodes: 1
+      VpcSecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+
+Outputs:
+  RedisEndpoint:
+    Description: "Primary Redis endpoint"
+    Value: !GetAtt RedisCluster.RedisEndpoint.Address
+
+  RedisPort:
+    Description: "Port on which Redis is listening"
+    Value: 6379

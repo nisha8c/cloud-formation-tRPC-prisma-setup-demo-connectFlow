@@ -9,9 +9,11 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@module-federation/nextjs-mf": "^8.8.42",
     "prettier": "^3.6.2",
     "turbo": "^2.5.8",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "webpack": "^5.102.1"
   },
   "engines": {
     "node": ">=18"
@@ -20,5 +22,15 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.9.1",
+    "@tanstack/react-query": "^5.90.5",
+    "@trpc/client": "^11.6.0",
+    "@trpc/react-query": "^11.6.0",
+    "radix-ui": "^1.4.3",
+    "react-redux": "^9.2.0",
+    "tailwind-variants": "^3.1.1",
+    "zod": "^4.1.12"
+  }
 }
