@@ -13,20 +13,8 @@ It includes:
 ---
 
 ## 🧩 Monorepo Structure
-connect-flow/
-│
-├── apps/
-│ ├── api/ # Express + tRPC backend
-│ └── web/ # Next.js 15 frontend
-│
-├── packages/
-│ └── db/ # Shared Prisma client + schema
-│
-└── infra/
-└── cloudformation/
-├── rds.yml # PostgreSQL stack
-├── redis.yml # ElastiCache Redis stack
-└── ecs.yml # ECS + Fargate API deployment
+<img width="596" height="405" alt="str" src="https://github.com/user-attachments/assets/6817442b-61e2-4d22-84a5-4754ecc2debd" />
+
 
 
 
@@ -44,6 +32,10 @@ connect-flow/
 | **Package Management** | npm workspaces |
 
 ---
+## 🧱 Project Set up
+<img width="986" height="548" alt="SetUp" src="https://github.com/user-attachments/assets/f3b83658-c115-4875-a71a-79663696c967" />
+
+
 
 ## 🧰 Prerequisites
 
